@@ -28,7 +28,11 @@ public class SecurityConfig {
 		return http
 				.csrf(csrf -> csrf.disable())
 				.authorizeHttpRequests(auth -> auth
-						.requestMatchers("/actuator/health", "/api/v1/rooms").permitAll()
+						.requestMatchers(
+								"/actuator/health",
+								"/api/v1/rooms",
+								"/api/v1/rooms/**")
+						.permitAll()
 						// 그 외 모든 요청은 인증 필요.
 						.anyRequest().authenticated())
 				// HTTP Basic 인증 사용 (개발용 임시. 나중에 JWT/OAuth2로 교체 예정)

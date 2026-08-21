@@ -4,7 +4,9 @@ import java.util.List;
 
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 @RestController
 @RequestMapping("/api/v1/rooms")
@@ -16,8 +18,15 @@ public class RoomController {
     }
 
     @GetMapping
-    public List<RoomResponse> getAllRooms() {
-        return roomService.getAllRooms();
+    public List<RoomResponse> getAllRooms(
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer minCapacity,
+            @RequestParam(required = false) Integer maxCapacity) {
+        return roomService.getAllRooms(status, minCapacity, maxCapacity);
     }
 
+    @GetMapping("/{roomId}")
+    public RoomResponse getRoom(@PathVariable Long roomId) {
+        return roomService.getRoom(roomId);
+    }
 }
