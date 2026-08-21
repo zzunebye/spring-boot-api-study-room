@@ -24,22 +24,17 @@ public class RoomService {
 		this.roomRepository = roomRepository;
 	}
 
-	public List<RoomResponse> getAllRooms(
+	public RoomListResponse getAllRooms(
 			String status,
 			Integer minCapacity,
 			Integer maxCapacity) {
-
-		// 컬렉션을 Entity → DTO로 바꿀 때 자주 쓰는 패턴
-		// return roomRepository.findAll().stream()
-		// .map(RoomResponse::from)
-		// .toList();
 		validateStatus(status);
 		validateCapacityRange(minCapacity, maxCapacity);
 
-		// Service는 Repository의 구현 방식을 모른다. 따라서 아래 Search가 어떤 조회 방식을 쓰는지 관심 X
-		return roomRepository.search(status, minCapacity, maxCapacity).stream()
+		List<RoomResponse> items = roomRepository.search(status, minCapacity, maxCapacity).stream()
 				.map(RoomResponse::from)
 				.toList();
+		return new RoomListResponse(items);
 	}
 
 	private void validateStatus(String status) {

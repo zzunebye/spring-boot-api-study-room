@@ -1,7 +1,5 @@
 package com.example.study_room.room;
 
-import java.util.List;
-
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,7 +16,7 @@ public class RoomController {
     }
 
     @GetMapping
-    public List<RoomResponse> getAllRooms(
+    public RoomListResponse getAllRooms(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Integer minCapacity,
             @RequestParam(required = false) Integer maxCapacity) {
