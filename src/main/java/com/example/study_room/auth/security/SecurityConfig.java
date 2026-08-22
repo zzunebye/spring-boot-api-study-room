@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /// Spring Security 설정 클래스
@@ -30,6 +32,8 @@ public class SecurityConfig {
 				.authorizeHttpRequests(auth -> auth
 						.requestMatchers(
 								"/actuator/health",
+								"/api/v1/auth",
+								"/api/v1/auth/**",
 								"/api/v1/rooms",
 								"/api/v1/rooms/**")
 						.permitAll()
@@ -38,5 +42,10 @@ public class SecurityConfig {
 				// HTTP Basic 인증 사용 (개발용 임시. 나중에 JWT/OAuth2로 교체 예정)
 				.httpBasic(Customizer.withDefaults())
 				.build();
+	}
+
+	@Bean
+	PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
 	}
 }

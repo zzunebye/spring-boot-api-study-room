@@ -1,0 +1,354 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "name": "Study Room API",
+    "description": "study-room Spring Boot API (local dev)\n\nVariables:\n- baseUrl: http://localhost:8080\n- basicAuthUser / basicAuthPassword: Spring Boot default user (see startup log)\n\nPublic: /actuator/health, /api/v1/rooms/**, /api/v1/auth/**\nAuth required: everything else (e.g. /actuator/info)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "basicAuthUser",
+      "value": "user"
+    },
+    {
+      "key": "basicAuthPassword",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Actuator",
+      "item": [
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/health",
+            "description": "Public. Returns application health status."
+          },
+          "response": []
+        },
+        {
+          "name": "Info (no auth — expect 401)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/info",
+            "description": "Protected endpoint. Without Basic Auth returns 401."
+          },
+          "response": []
+        },
+        {
+          "name": "Info (Basic Auth)",
+          "request": {
+            "auth": {
+              "type": "basic",
+              "basic": [
+                {
+                  "key": "username",
+                  "value": "{{basicAuthUser}}",
+                  "type": "string"
+                },
+                {
+                  "key": "password",
+                  "value": "{{basicAuthPassword}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actuator/info",
+            "description": "Set basicAuthPassword from Spring Boot startup log (generated password for user 'user')."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Rooms",
+      "item": [
+        {
+          "name": "List all",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/rooms",
+            "description": "Returns { \"items\": [ RoomResponse, ... ] }"
+          },
+          "response": []
+        },
+        {
+          "name": "List — filter by status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms?status=ACTIVE",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE",
+                  "description": "ACTIVE | INACTIVE | MAINTENANCE"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List — filter by capacity",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms?minCapacity=4&maxCapacity=8",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms"
+              ],
+              "query": [
+                {
+                  "key": "minCapacity",
+                  "value": "4"
+                },
+                {
+                  "key": "maxCapacity",
+                  "value": "8"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List — combined filters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms?status=ACTIVE&minCapacity=2&maxCapacity=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "ACTIVE"
+                },
+                {
+                  "key": "minCapacity",
+                  "value": "2"
+                },
+                {
+                  "key": "maxCapacity",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get by id — success",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/rooms/1",
+            "description": "Assumes seed data with id=1 exists."
+          },
+          "response": []
+        },
+        {
+          "name": "Get by id — not found (404)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/rooms/999",
+            "description": "Expect { \"code\": \"ROOM_NOT_FOUND\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "List — invalid status (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms?status=INVALID",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "INVALID"
+                }
+              ]
+            },
+            "description": "Expect { \"code\": \"INVALID_REQUEST\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "List — minCapacity > maxCapacity (400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/rooms?minCapacity=10&maxCapacity=4",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "rooms"
+              ],
+              "query": [
+                {
+                  "key": "minCapacity",
+                  "value": "10"
+                },
+                {
+                  "key": "maxCapacity",
+                  "value": "4"
+                }
+              ]
+            },
+            "description": "Expect { \"code\": \"INVALID_REQUEST\", ... }"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Signup — success (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user1@example.com\",\n  \"password\": \"Password123\",\n  \"name\": \"June\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/signup",
+            "description": "Password rules: min 8 chars, at least one uppercase letter."
+          },
+          "response": []
+        },
+        {
+          "name": "Signup — duplicate email (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user1@example.com\",\n  \"password\": \"Password123\",\n  \"name\": \"June\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/signup",
+            "description": "Run after success request. Expect { \"code\": \"EMAIL_ALREADY_EXISTS\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "Signup — validation fail (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"bad\",\n  \"password\": \"123\",\n  \"name\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/signup",
+            "description": "Expect { \"code\": \"INVALID_REQUEST\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "Signup — password without uppercase (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"uppercase-test-{{$timestamp}}@example.com\",\n  \"password\": \"password123\",\n  \"name\": \"June\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/signup",
+            "description": "Fails @Pattern(regexp = \".*[A-Z].*\") on password. Expect 400 + INVALID_REQUEST. Uses unique email so duplicate signup does not mask validation failure."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

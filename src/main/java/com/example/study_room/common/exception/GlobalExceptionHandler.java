@@ -1,8 +1,12 @@
 package com.example.study_room.common.exception;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import jakarta.validation.ConstraintViolationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -20,4 +24,12 @@ public class GlobalExceptionHandler {
 				.status(errorCode.getHttpStatus())
 				.body(ErrorResponse.from(errorCode));
 	}
+
+	@ExceptionHandler({ MethodArgumentNotValidException.class, ConstraintViolationException.class })
+	public ResponseEntity<ErrorResponse> handleValidation(Exception ex) {
+		return ResponseEntity
+				.status(HttpStatus.BAD_REQUEST)
+				.body(ErrorResponse.from(ErrorCode.INVALID_REQUEST));
+	}
+
 }

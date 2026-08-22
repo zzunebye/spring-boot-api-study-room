@@ -10,6 +10,7 @@ public enum ErrorCode {
 
     INVALID_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 요청입니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
+    EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "이메일이 이미 사용중."),
     ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "공간을 찾을 수 없습니다."),
     ROOM_NOT_AVAILABLE(HttpStatus.CONFLICT, "현재 이용할 수 없는 공간입니다."),
     RESERVATION_TIME_CONFLICT(HttpStatus.CONFLICT, "선택한 시간에 이미 다른 예약이 있습니다."),
