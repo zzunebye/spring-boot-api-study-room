@@ -15,7 +15,8 @@ public enum ErrorCode {
     ROOM_NOT_AVAILABLE(HttpStatus.CONFLICT, "현재 이용할 수 없는 공간입니다."),
     RESERVATION_TIME_CONFLICT(HttpStatus.CONFLICT, "선택한 시간에 이미 다른 예약이 있습니다."),
     RESERVATION_POLICY_VIOLATION(HttpStatus.BAD_REQUEST, "예약 정책을 위반했습니다."),
-    RESERVATION_FORBIDDEN(HttpStatus.FORBIDDEN, "예약에 대한 권한이 없습니다.");
+    RESERVATION_FORBIDDEN(HttpStatus.FORBIDDEN, "예약에 대한 권한이 없습니다."),
+    INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "인증 정보가 올바르지 않습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

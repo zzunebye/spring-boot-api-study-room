@@ -2,6 +2,8 @@ package com.example.study_room.auth;
 
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.study_room.user.LoginRequest;
+import com.example.study_room.user.LoginResponse;
 import com.example.study_room.user.SignupRequest;
 import com.example.study_room.user.UserResponse;
 
@@ -20,6 +22,14 @@ public class AuthController {
 
     public AuthController(AuthService authService) {
         this.authService = authService;
+    }
+
+    // Login
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request) {
+        LoginResponse response = authService.login(request);
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
     @PostMapping("/signup")
