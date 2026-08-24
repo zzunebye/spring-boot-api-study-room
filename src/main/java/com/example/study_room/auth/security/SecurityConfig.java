@@ -38,8 +38,11 @@ public class SecurityConfig {
 	/// 메서드의 역할은 설정 파일을 읽는 게 아니라 “이 앱의 필터 체인은 이 객체다”라고 컨테이너에 등록하는 것.
 
 	@Bean
-	SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationFilter jwtAuthenticationFilter)
-			throws Exception {
+	SecurityFilterChain securityFilterChain(
+			HttpSecurity http,
+			JwtAuthenticationFilter jwtAuthenticationFilter,
+			JsonAuthenticationEntryPoint authenticationEntryPoint,
+			JsonAccessDeniedHandler accessDeniedHandler) throws Exception {
 		return http
 				.csrf(csrf -> csrf.disable())
 				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -58,11 +61,14 @@ public class SecurityConfig {
 				.formLogin(AbstractHttpConfigurer::disable)
 				// HTTP Basic 인증 사용 (개발용 임시. 나중에 JWT/OAuth2로 교체 예정)
 				// .httpBasic(Customizer.withDefaults()).formLogin(null)
+				// 401/403을 ErrorResponse JSON으로 통일 (필터 체인에서 발생 → Advice가 못 잡음)
+				.exceptionHandling(ex -> ex
+						.authenticationEntryPoint(authenticationEntryPoint)
+						.accessDeniedHandler(accessDeniedHandler))
 				// JWT 필터를 Security 필터 체인에 등록.
 				// Authorization: Bearer ...를 읽어 토큰을 검증하고 SecurityContext에 사용자를 넣는 필터
 				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
 				.build();
-
 	}
 
 	@Bean
