@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Study Room API",
-    "description": "study-room Spring Boot API (local dev)\n\n## Variables\n- `baseUrl`: http://localhost:8080\n- `accessToken`: set by **Login — success** or **Refresh — success** test script\n- `refreshToken`: set by **Login — success** test script\n- `testEmail` / `testPassword`: default test user credentials\n\n## Auth\n- Public: `/actuator/health`, `/api/v1/rooms/**`, `/api/v1/auth/**`\n- JWT required: everything else (e.g. `/api/v1/me`, `/actuator/info`)\n- Send `Authorization: Bearer {{accessToken}}` on protected requests\n\n## Suggested flow\n1. **Signup — success** (or use existing user)\n2. **Login — success** → saves `accessToken` + `refreshToken`\n3. **Refresh — success** → updates `accessToken` (no Bearer needed)\n4. **Get me — success**",
+    "description": "study-room Spring Boot API (local dev)\n\n## Variables\n- `baseUrl`: http://localhost:8080\n- `accessToken`: set by **Login — success** or **Refresh — success** test script\n- `refreshToken`: set by **Login — success** test script\n- `testEmail` / `testPassword`: default test user credentials\n\n## Auth\n- Public: `/actuator/health`, `/api/v1/rooms/**`, `/api/v1/auth/**`\n- JWT required: everything else (e.g. `/api/v1/me`, `/actuator/info`)\n- Send `Authorization: Bearer {{accessToken}}` on protected requests\n\n## Suggested flow\n1. **Signup — success** (or use existing user)\n2. **Login — success** → saves `accessToken` + `refreshToken`\n3. **Refresh — success** → updates `accessToken` (no Bearer needed)\n4. **Get me — success**\n5. **Logout — success** → revokes refresh (204)\n6. **Refresh after logout** → 401",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -387,6 +387,140 @@
             },
             "url": "{{baseUrl}}/api/v1/auth/refresh",
             "description": "Expect { \"code\": \"INVALID_REQUEST\", ... } when @Valid is enabled on controller."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout — success (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "description": "Run **Login — success** first so `refreshToken` is set.\n\nPublic endpoint — no Bearer header.\n\nRevokes this refresh token only (single-device logout).\n\nExpect **204 No Content**.\n\nUnknown / already-revoked tokens also return 204 (idempotent)."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout — unknown token (204)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 204', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"unknown-refresh-token\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "description": "Unknown refresh token. Expect **204** (does not reveal whether token existed)."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout — validation fail (400)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/logout",
+            "description": "Expect { \"code\": \"INVALID_REQUEST\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh after logout (401)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/refresh",
+            "description": "Run **Logout — success** first with the same `refreshToken`.\n\nExpect { \"code\": \"INVALID_REFRESH_TOKEN\", ... }"
           },
           "response": []
         }
