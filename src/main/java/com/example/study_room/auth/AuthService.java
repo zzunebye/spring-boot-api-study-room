@@ -111,4 +111,19 @@ public class AuthService {
         return new RefreshResponse(accessToken);
     }
 
+    @Transactional
+    public void logout(RefreshTokenRequest request) {
+        String refreshToken = request.refreshToken();
+        String hashed = RefreshTokenHasher.hash(refreshToken);
+        // filter, ifPresent are Java Optional's methods.
+        refreshTokenRepository.findByTokenHash(hashed)
+                .filter(token -> token.isActive(Instant.now()))
+                // For idempotency
+                .ifPresent(token -> {
+                    // 저장된 refresh token을 revoke(폐기) 처리하고, 변경 사항을 저장한다.
+                    token.revoke(); // 토큰의 활성 상태를 비활성화
+                    refreshTokenRepository.save(token); // 상태가 변경된 토큰을 저장소에 반영
+                });
+
+    }
 }
