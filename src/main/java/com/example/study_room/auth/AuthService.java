@@ -91,6 +91,7 @@ public class AuthService {
         return new LoginResponse(accessToken, refreshToken, UserResponse.from(user));
     }
 
+    @Transactional(readOnly = true)
     public RefreshResponse refresh(RefreshTokenRequest request) {
         String tokenHash = RefreshTokenHasher.hash(request.refreshToken());
 
