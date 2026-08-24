@@ -6,16 +6,29 @@
 
 현재 구현·노출 중인 HTTP API입니다. 인증 정책은 `SecurityConfig` 기준입니다.
 
+### 인증 정책
+
+| 구분 | 경로 | 인증 |
+| ---- | ---- | ---- |
+| 공개 | `/actuator/health`, `/api/v1/auth/**`, `/api/v1/rooms/**` | 불필요 |
+| 보호 | 그 외 (예: `/api/v1/me`, `/actuator/info`) | **JWT Bearer** (`Authorization: Bearer {accessToken}`) |
+
+- 세션 없음 (`STATELESS`). HTTP Basic / form login 비활성.
+- Access Token: JWT. Refresh Token: opaque 문자열, DB에는 SHA-256 hash만 저장 (`refresh_tokens`).
+
 ### 요약
 
-| Method | Path                     | 인증                  | 설명                           |
-| ------ | ------------------------ | --------------------- | ------------------------------ |
-| `GET`  | `/actuator/health`       | 불필요                | 애플리케이션·DB 헬스 체크      |
-| `GET`  | `/actuator/info`         | **필요** (HTTP Basic) | 애플리케이션 정보              |
-| `GET`  | `/api/v1/rooms`          | 불필요                | 공간 목록 조회 (필터 optional) |
-| `GET`  | `/api/v1/rooms/{roomId}` | 불필요                | 공간 상세 조회                 |
-
-> 그 외 경로는 HTTP Basic 인증이 필요합니다. (개발용 임시, JWT로 교체 예정)
+| Method | Path                     | 인증           | 설명                              |
+| ------ | ------------------------ | -------------- | --------------------------------- |
+| `GET`  | `/actuator/health`       | 불필요         | 애플리케이션·DB 헬스 체크         |
+| `GET`  | `/actuator/info`         | JWT Bearer     | 애플리케이션 정보                 |
+| `POST` | `/api/v1/auth/signup`    | 불필요         | 회원가입                          |
+| `POST` | `/api/v1/auth/login`     | 불필요         | 로그인 (access + refresh 발급)    |
+| `POST` | `/api/v1/auth/refresh`   | 불필요         | refresh로 새 access 발급          |
+| `POST` | `/api/v1/auth/logout`    | 불필요         | refresh 1건 revoke (항상 204)     |
+| `GET`  | `/api/v1/me`             | JWT Bearer     | 현재 인증 사용자 정보             |
+| `GET`  | `/api/v1/rooms`          | 불필요         | 공간 목록 조회 (필터 optional)    |
+| `GET`  | `/api/v1/rooms/{roomId}` | 불필요         | 공간 상세 조회                    |
 
 ---
 
@@ -36,9 +49,126 @@
 
 ### `GET /actuator/info`
 
-**인증:** HTTP Basic 필요
+**인증:** JWT Bearer 필요
 
 Actuator `info` endpoint. `application.properties`에서 `health`, `info`만 노출 중입니다.
+
+---
+
+### `POST /api/v1/auth/signup`
+
+**인증:** 불필요
+
+**요청:**
+
+```json
+{
+  "email": "user1@example.com",
+  "password": "Password123",
+  "name": "June"
+}
+```
+
+비밀번호: 최소 8자, 대문자 1개 이상.
+
+**응답 (201):** `UserResponse` (password 제외)
+
+**에러:** `EMAIL_ALREADY_EXISTS` (409), `INVALID_REQUEST` (400)
+
+---
+
+### `POST /api/v1/auth/login`
+
+**인증:** 불필요
+
+**요청:**
+
+```json
+{
+  "email": "user1@example.com",
+  "password": "Password123"
+}
+```
+
+**응답 (200):**
+
+```json
+{
+  "accessToken": "eyJ...",
+  "refreshToken": "a1b2c3...",
+  "user": {
+    "id": 1,
+    "email": "user1@example.com",
+    "name": "June",
+    "role": "USER",
+    "status": "ACTIVE"
+  }
+}
+```
+
+로그인마다 refresh token 원문을 발급하고, DB에는 `token_hash`만 저장합니다. (다중 기기 허용)
+
+**에러:** `INVALID_CREDENTIALS` (401), `INVALID_REQUEST` (400)
+
+---
+
+### `POST /api/v1/auth/refresh`
+
+**인증:** 불필요 (access 만료 후에도 호출 가능)
+
+**요청:**
+
+```json
+{
+  "refreshToken": "..."
+}
+```
+
+**응답 (200):**
+
+```json
+{
+  "accessToken": "eyJ..."
+}
+```
+
+**에러:** `INVALID_REFRESH_TOKEN` (401) — 없음 / revoke됨 / 만료
+
+---
+
+### `POST /api/v1/auth/logout`
+
+**인증:** 불필요
+
+**요청:**
+
+```json
+{
+  "refreshToken": "..."
+}
+```
+
+해당 refresh **1건**만 revoke합니다. (다른 기기 세션은 유지)
+
+| 상황 | HTTP |
+| ---- | ---- |
+| 유효한 refresh | 204 (revoke) |
+| 이미 revoke / 만료 / DB에 없음 | 204 (idempotent, 정보 노출 최소화) |
+| body 빈 값 | 400 `INVALID_REQUEST` |
+
+---
+
+### `GET /api/v1/me`
+
+**인증:** JWT Bearer 필요
+
+```http
+Authorization: Bearer {accessToken}
+```
+
+`@AuthenticationPrincipal AuthUser`로 토큰의 userId를 받고, DB에서 최신 `UserResponse`를 반환합니다.
+
+**에러:** 토큰 없음/invalid → 401 (Spring Security). 사용자 없음 → `USER_NOT_FOUND` (404)
 
 ---
 
@@ -134,11 +264,73 @@ GET /api/v1/rooms?status=ACTIVE&minCapacity=4&maxCapacity=8
 }
 ```
 
-| HTTP | code              | 사용처 (현재)                    |
-| ---- | ----------------- | -------------------------------- |
-| 400  | `INVALID_REQUEST` | 잘못된 필터 파라미터             |
-| 404  | `ROOM_NOT_FOUND`  | 없는 공간 ID                     |
-| 401  | (Spring Security) | 인증 필요 API에 credentials 없음 |
+| HTTP | code                     | 사용처 (현재)                          |
+| ---- | ------------------------ | -------------------------------------- |
+| 400  | `INVALID_REQUEST`        | 잘못된 필터·validation                 |
+| 401  | `INVALID_CREDENTIALS`    | 로그인 실패                            |
+| 401  | `INVALID_REFRESH_TOKEN`  | refresh 실패                           |
+| 401  | (Spring Security)        | 보호 API에 Bearer 없음/invalid JWT     |
+| 404  | `ROOM_NOT_FOUND`         | 없는 공간 ID                           |
+| 404  | `USER_NOT_FOUND`         | `/me` 등에서 사용자 없음               |
+| 409  | `EMAIL_ALREADY_EXISTS`   | 이메일 중복 가입                       |
+
+---
+
+## JWT 인증 흐름
+
+보호 API (`GET /api/v1/me` 등) 요청 시:
+
+```text
+Authorization: Bearer {accessToken}
+        │
+        ▼
+JwtAuthenticationFilter
+  - Bearer 추출
+  - JwtTokenProvider.parseAccessToken()
+  - AuthUser(id, email, role) → SecurityContext
+  - filterChain.doFilter()
+        │
+        ▼
+authorizeHttpRequests (authenticated)
+        │
+        ▼
+Controller (@AuthenticationPrincipal AuthUser)
+```
+
+토큰이 없거나 invalid이면 `SecurityContext`가 비어 보호 API는 401입니다. 공개 API는 필터를 통과해도 인증 없이 동작합니다.
+
+---
+
+## 로그인·Refresh Token 흐름
+
+```text
+POST /api/v1/auth/login
+    ↓
+AuthService.login()
+    ↓
+accessToken = JwtTokenProvider.createAccessToken(user)   ← JWT
+refreshToken = JwtTokenProvider.createRefreshToken()     ← opaque UUID
+    ↓
+RefreshTokenHasher.hash(refreshToken) → refresh_tokens INSERT
+    ↓
+LoginResponse(accessToken, refreshToken 원문, user)
+```
+
+```text
+POST /api/v1/auth/refresh  { refreshToken }
+    ↓
+hash → findByTokenHash → isActive?
+    ↓
+새 accessToken 발급
+```
+
+```text
+POST /api/v1/auth/logout  { refreshToken }
+    ↓
+hash → findByTokenHash → active면 revoke()
+    ↓
+항상 204 (없으면 skip)
+```
 
 ---
 

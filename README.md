@@ -1,6 +1,8 @@
-## 프로젝트 구성
+# Study Room Project
 
-기능 별 패키지
+## Project Structure
+
+Packages by feature
 
 ```
 room/
@@ -19,21 +21,21 @@ reservation/
 └── dto/
 ```
 
-## 프로젝트 실행
+## Run the project
 
-```
+```bash
 ./gradlew bootRun
 ```
 
-## 프로젝트 테스트
+## Test the project
 
-```
+```bash
 ./gradlew test
 ```
 
-## DB
+## Database
 
-### DB 마이그레이션
+### Database Migration
 
 Flyway를 사용할때는 `V{버전}__{설명}.sql`와 같이 파일명을 정하는 것이 관례이다.
 
