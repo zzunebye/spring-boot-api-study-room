@@ -5,6 +5,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.study_room.auth.AuthUser;
+import com.example.study_room.common.exception.BusinessException;
+import com.example.study_room.common.exception.ErrorCode;
 import com.example.study_room.user.User;
 import com.example.study_room.user.UserRepository;
 import com.example.study_room.user.UserResponse;
@@ -29,7 +31,7 @@ public class MeController {
     @GetMapping("api/v1/me")
     public ResponseEntity<UserResponse> me(@AuthenticationPrincipal AuthUser authUser) {
         final User user = userRepository.findById(authUser.id())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         return ResponseEntity.ok(UserResponse.from(user));
     }
