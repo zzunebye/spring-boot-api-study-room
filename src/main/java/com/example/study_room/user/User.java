@@ -1,6 +1,5 @@
 package com.example.study_room.user;
 
-import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,7 +13,6 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String email;
-    @Column(name = "password_hash")
     private String passwordHash;
     private String name;
     private String role; // USER, ADMIN
