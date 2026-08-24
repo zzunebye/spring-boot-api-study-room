@@ -49,7 +49,7 @@ CREATE TABLE reservations (
     -- 중복 요청으
     CONSTRAINT reservations_user_request_key_uq UNIQUE (user_id, request_key)
 );
-ALTER TABLE reservations
+ALTER TABLE reservations -- 예약 중복 방지를 위한 EXCLUDE 제약조건 추가
 ADD CONSTRAINT reservations_no_overlap EXCLUDE USING gist (
         room_id WITH =,
         tstzrange(start_at, end_at, '[)') WITH &&
