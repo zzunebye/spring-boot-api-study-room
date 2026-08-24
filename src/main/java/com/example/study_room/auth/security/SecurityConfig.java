@@ -15,6 +15,7 @@ import com.example.study_room.auth.JwtAuthenticationFilter;
 import com.example.study_room.auth.JwtTokenProvider;
 
 /// Spring Security 설정 클래스
+/// 요청 한 번 처리하는 동안의 ThreadLocal container. [Authorization] from header will be stored here
 /// 
 ///  <HTTP 요청>
 ///   → SecurityFilterChain (필터들)

@@ -16,6 +16,8 @@ import tools.jackson.databind.ObjectMapper;
 
 /**
  * 인증되지 않은 요청(401)을 {@link ErrorResponse} JSON으로 반환한다.
+ * This might be triggered when Security Context does not contain any
+ * authentication information. For example, if the path is authenticated route.
  * Security 필터 체인에서 발생하므로 {@code @RestControllerAdvice}가 잡지 못하기 때문에 별도로 처리해야 한다.
  */
 @Component
