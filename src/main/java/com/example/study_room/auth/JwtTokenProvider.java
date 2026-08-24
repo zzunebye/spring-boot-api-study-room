@@ -36,7 +36,7 @@ public class JwtTokenProvider {
 	public String createAccessToken(User user) {
 		// 액세스 토큰 만료 시간 계산
 		Instant now = Instant.now();
-		Instant expiry = now.plus(jwtProperties.accessToken().expiration());
+		Instant expiry = now.plus(jwtProperties.accessTokenSettings().expiration());
 
 		// JWT 빌더를 사용해 토큰을 생성하고 반환
 		return Jwts.builder()

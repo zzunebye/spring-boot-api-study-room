@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Study Room API",
-    "description": "study-room Spring Boot API (local dev)\n\n## Variables\n- `baseUrl`: http://localhost:8080\n- `accessToken` / `refreshToken`: set automatically by **Login — success** test script\n- `testEmail` / `testPassword`: default test user credentials\n\n## Auth\n- Public: `/actuator/health`, `/api/v1/rooms/**`, `/api/v1/auth/**`\n- JWT required: everything else (e.g. `/api/v1/me`, `/actuator/info`)\n- Send `Authorization: Bearer {{accessToken}}` on protected requests\n\n## Suggested flow\n1. **Signup — success** (or use existing user)\n2. **Login — success** → saves tokens to collection variables\n3. **Get me — success**",
+    "description": "study-room Spring Boot API (local dev)\n\n## Variables\n- `baseUrl`: http://localhost:8080\n- `accessToken`: set by **Login — success** or **Refresh — success** test script\n- `refreshToken`: set by **Login — success** test script\n- `testEmail` / `testPassword`: default test user credentials\n\n## Auth\n- Public: `/actuator/health`, `/api/v1/rooms/**`, `/api/v1/auth/**`\n- JWT required: everything else (e.g. `/api/v1/me`, `/actuator/info`)\n- Send `Authorization: Bearer {{accessToken}}` on protected requests\n\n## Suggested flow\n1. **Signup — success** (or use existing user)\n2. **Login — success** → saves `accessToken` + `refreshToken`\n3. **Refresh — success** → updates `accessToken` (no Bearer needed)\n4. **Get me — success**",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -289,6 +289,104 @@
             },
             "url": "{{baseUrl}}/api/v1/auth/login",
             "description": "Expect { \"code\": \"INVALID_REQUEST\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh — success (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "    pm.test('accessToken updated', function () {",
+                  "        pm.expect(json.accessToken).to.be.a('string').and.not.empty;",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/refresh",
+            "description": "Run **Login — success** first so `refreshToken` is set.\n\nPublic endpoint — no Bearer header.\n\nReturns:\n```json\n{ \"accessToken\": \"...\" }\n```\n\nTest script updates collection `accessToken`."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh — invalid token (401)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"invalid-refresh-token\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/refresh",
+            "description": "Expect { \"code\": \"INVALID_REFRESH_TOKEN\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh — validation fail (400)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/auth/refresh",
+            "description": "Expect { \"code\": \"INVALID_REQUEST\", ... } when @Valid is enabled on controller."
           },
           "response": []
         }

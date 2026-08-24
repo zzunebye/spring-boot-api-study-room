@@ -42,6 +42,9 @@ dependencies {
 	runtimeOnly("io.jsonwebtoken:jjwt-impl:0.12.6")
 	runtimeOnly("io.jsonwebtoken:jjwt-jackson:0.12.6")
 
+	// jwt.secret 등의 @ConfigurationProperties를 위해?
+	annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+
 }
 
 tasks.withType<Test> {
