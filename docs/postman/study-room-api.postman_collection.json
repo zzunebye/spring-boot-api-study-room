@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Study Room API",
-    "description": "study-room Spring Boot API (local dev)\n\n## Variables\n- `baseUrl`: http://localhost:8080\n- `accessToken` / `refreshToken`: set by **Login — success**\n- `testEmail` / `testPassword`: default test user\n- `roomId`: seed room (usually 1)\n- `idempotencyKey`: UUID for reservation create (change for a new booking)\n\n## Auth\n- Public: `/actuator/health`, `/api/v1/rooms/**`, `/api/v1/auth/**`\n- JWT required: `/api/v1/me`, `/api/v1/reservations`, `/actuator/info`\n\n## Suggested flow\n1. Signup (or existing user) → **Login — success**\n2. **List rooms** if you need a roomId\n3. **Create reservation — success** (Bearer + Idempotency-Key)\n4. **Create reservation — same key** (idempotent replay)\n5. **Create reservation — overlap** (different key, overlapping slot → 409)",
+    "description": "study-room Spring Boot API (local dev)\n\n## Variables\n- `baseUrl`: http://localhost:8080\n- `accessToken` / `refreshToken`: set by **Login — success**\n- `testEmail` / `testPassword`: default test user\n- `roomId`: seed room (usually 1)\n- `idempotencyKey`: UUID for reservation create (change for a new booking)\n\n## Auth\n- Public: `/actuator/health`, `/api/v1/rooms/**`, `/api/v1/auth/**`\n- JWT required: `/api/v1/me`, `/api/v1/reservations`, `/actuator/info`\n\n## Reservation policy (application.properties)\n- Duration 30m–4h, 30-minute multiples\n- Max 30 days ahead, max 3 active (CONFIRMED) per user\n\n## Suggested flow\n1. Signup (or existing user) → **Login — success**\n2. **List rooms** if you need a roomId\n3. **Create reservation — success** (201)\n4. **Create reservation — same key** (200, idempotent replay)\n5. **Create reservation — overlap** (409 RESERVATION_TIME_CONFLICT)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -587,6 +587,19 @@
       "item": [
         {
           "name": "Create reservation — success (201)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -614,7 +627,20 @@
           "response": []
         },
         {
-          "name": "Create reservation — same Idempotency-Key",
+          "name": "Create reservation — same Idempotency-Key (200)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 (idempotent replay)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -637,7 +663,7 @@
               }
             },
             "url": "{{baseUrl}}/api/v1/reservations",
-            "description": "Replay after **Create reservation — success** with the same `idempotencyKey`.\n\nExpect the **same reservation** (no second row). Status is currently always 201."
+            "description": "Replay after **Create reservation — success** with the same `idempotencyKey`.\n\nExpect the **same reservation** (no second row). **200 OK** (not 201)."
           },
           "response": []
         },
@@ -777,6 +803,90 @@
             },
             "url": "{{baseUrl}}/api/v1/reservations",
             "description": "Expect { \"code\": \"INVALID_REQUEST\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "Create reservation — policy: duration not 30m multiple (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"startAt\": \"2026-09-20T10:00:00+09:00\",\n  \"endAt\": \"2026-09-20T10:45:00+09:00\",\n  \"participantCount\": 2,\n  \"purpose\": \"45분 (30분 배수 아님)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "Duration 45m — not a 30-minute multiple.\n\nExpect { \"code\": \"RESERVATION_POLICY_VIOLATION\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "Create reservation — policy: below minimum duration (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"startAt\": \"2026-09-20T14:00:00+09:00\",\n  \"endAt\": \"2026-09-20T14:20:00+09:00\",\n  \"participantCount\": 2,\n  \"purpose\": \"20분 (최소 30분)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "Duration 20m — below minimum 30m.\n\nExpect { \"code\": \"RESERVATION_POLICY_VIOLATION\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "Create reservation — policy: over capacity (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"startAt\": \"2026-09-20T15:00:00+09:00\",\n  \"endAt\": \"2026-09-20T16:00:00+09:00\",\n  \"participantCount\": 999,\n  \"purpose\": \"정원 초과\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "participantCount > room capacity.\n\nExpect { \"code\": \"RESERVATION_POLICY_VIOLATION\", ... }"
           },
           "response": []
         }

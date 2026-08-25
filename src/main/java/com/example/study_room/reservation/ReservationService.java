@@ -15,10 +15,15 @@ import com.example.study_room.room.StudyRoom;
 public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final RoomRepository roomRepository;
+    private final ReservationPolicy reservationPolicy;
 
-    public ReservationService(ReservationRepository reservationRepository, RoomRepository roomRepository) {
+    public ReservationService(
+            ReservationRepository reservationRepository,
+            RoomRepository roomRepository,
+            ReservationPolicy reservationPolicy) {
         this.reservationRepository = reservationRepository;
         this.roomRepository = roomRepository;
+        this.reservationPolicy = reservationPolicy;
     }
 
     @Transactional
@@ -31,10 +36,6 @@ public class ReservationService {
             return new ReserveResult(ReservationResponse.from(existingReservation), false);
         }
 
-        if (!request.startAt().isBefore(request.endAt())) {
-            throw new BusinessException(ErrorCode.RESERVATION_POLICY_VIOLATION);
-        }
-
         // Find Room by ID
         StudyRoom room = roomRepository.findById(request.roomId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
@@ -43,9 +44,14 @@ public class ReservationService {
             throw new BusinessException(ErrorCode.ROOM_NOT_AVAILABLE);
         }
 
-        if (request.participantCount() > room.getCapacity()) {
-            throw new BusinessException(ErrorCode.RESERVATION_POLICY_VIOLATION);
-        }
+        // ReservationPolicy: time range, slot grid, future limit, capacity, active
+        // count
+        reservationPolicy.validateForCreate(
+                userId,
+                room,
+                request.startAt(),
+                request.endAt(),
+                request.participantCount());
 
         Reservation reservation = Reservation.create(
                 userId,
