@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "name": "Study Room API",
-    "description": "study-room Spring Boot API (local dev)\n\n## Variables\n- `baseUrl`: http://localhost:8080\n- `accessToken`: set by **Login — success** or **Refresh — success** test script\n- `refreshToken`: set by **Login — success** test script\n- `testEmail` / `testPassword`: default test user credentials\n\n## Auth\n- Public: `/actuator/health`, `/api/v1/rooms/**`, `/api/v1/auth/**`\n- JWT required: everything else (e.g. `/api/v1/me`, `/actuator/info`)\n- Send `Authorization: Bearer {{accessToken}}` on protected requests\n\n## Suggested flow\n1. **Signup — success** (or use existing user)\n2. **Login — success** → saves `accessToken` + `refreshToken`\n3. **Refresh — success** → updates `accessToken` (no Bearer needed)\n4. **Get me — success**\n5. **Logout — success** → revokes refresh (204)\n6. **Refresh after logout** → 401",
+    "description": "study-room Spring Boot API (local dev)\n\n## Variables\n- `baseUrl`: http://localhost:8080\n- `accessToken` / `refreshToken`: set by **Login — success**\n- `testEmail` / `testPassword`: default test user\n- `roomId`: seed room (usually 1)\n- `idempotencyKey`: UUID for reservation create (change for a new booking)\n\n## Auth\n- Public: `/actuator/health`, `/api/v1/rooms/**`, `/api/v1/auth/**`\n- JWT required: `/api/v1/me`, `/api/v1/reservations`, `/actuator/info`\n\n## Suggested flow\n1. Signup (or existing user) → **Login — success**\n2. **List rooms** if you need a roomId\n3. **Create reservation — success** (Bearer + Idempotency-Key)\n4. **Create reservation — same key** (idempotent replay)\n5. **Create reservation — overlap** (different key, overlapping slot → 409)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -25,6 +25,14 @@
     {
       "key": "refreshToken",
       "value": ""
+    },
+    {
+      "key": "roomId",
+      "value": "1"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "550e8400-e29b-41d4-a716-446655440000"
     }
   ],
   "auth": {
@@ -569,6 +577,206 @@
             "header": [],
             "url": "{{baseUrl}}/api/v1/me",
             "description": "Expect 401 Unauthorized."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reservations",
+      "item": [
+        {
+          "name": "Create reservation — success (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"startAt\": \"2026-09-15T10:00:00+09:00\",\n  \"endAt\": \"2026-09-15T11:00:00+09:00\",\n  \"participantCount\": 2,\n  \"purpose\": \"프로젝트 회의\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "Run **Login — success** first.\n\nRequires:\n- `Authorization: Bearer {{accessToken}}` (collection auth)\n- `Idempotency-Key: {{idempotencyKey}}`\n\nuserId is taken from the JWT, not the body.\n\nExpect **201 Created**."
+          },
+          "response": []
+        },
+        {
+          "name": "Create reservation — same Idempotency-Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{idempotencyKey}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"startAt\": \"2026-09-15T10:00:00+09:00\",\n  \"endAt\": \"2026-09-15T11:00:00+09:00\",\n  \"participantCount\": 2,\n  \"purpose\": \"프로젝트 회의\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "Replay after **Create reservation — success** with the same `idempotencyKey`.\n\nExpect the **same reservation** (no second row). Status is currently always 201."
+          },
+          "response": []
+        },
+        {
+          "name": "Create reservation — overlap (409)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "660e8400-e29b-41d4-a716-446655440001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"startAt\": \"2026-09-15T10:30:00+09:00\",\n  \"endAt\": \"2026-09-15T11:30:00+09:00\",\n  \"participantCount\": 2,\n  \"purpose\": \"겹치는 시간\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "Different Idempotency-Key, overlapping slot on the same room.\n\nRun after **Create reservation — success** (10:00–11:00).\n\nExpect { \"code\": \"RESERVATION_TIME_CONFLICT\", ... }"
+          },
+          "response": []
+        },
+        {
+          "name": "Create reservation — adjacent slot (201)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "770e8400-e29b-41d4-a716-446655440002"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"startAt\": \"2026-09-15T11:00:00+09:00\",\n  \"endAt\": \"2026-09-15T12:00:00+09:00\",\n  \"participantCount\": 2,\n  \"purpose\": \"앞 예약 종료와 맞닿음\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "`[)` range: 10:00–11:00 then 11:00–12:00 should **succeed** (no overlap).\n\nUse a **new** Idempotency-Key. Expect 201."
+          },
+          "response": []
+        },
+        {
+          "name": "Create reservation — no auth (401)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"startAt\": \"2026-09-15T13:00:00+09:00\",\n  \"endAt\": \"2026-09-15T14:00:00+09:00\",\n  \"participantCount\": 2,\n  \"purpose\": \"unauthenticated\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "Expect 401."
+          },
+          "response": []
+        },
+        {
+          "name": "Create reservation — missing Idempotency-Key (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": {{roomId}},\n  \"startAt\": \"2026-09-15T13:00:00+09:00\",\n  \"endAt\": \"2026-09-15T14:00:00+09:00\",\n  \"participantCount\": 2,\n  \"purpose\": \"no key\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "Missing required header `Idempotency-Key`. Expect 400 (Spring missing-header)."
+          },
+          "response": []
+        },
+        {
+          "name": "Create reservation — validation fail (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"roomId\": null,\n  \"startAt\": null,\n  \"endAt\": null,\n  \"participantCount\": 0,\n  \"purpose\": \"bad\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{baseUrl}}/api/v1/reservations",
+            "description": "Expect { \"code\": \"INVALID_REQUEST\", ... }"
           },
           "response": []
         }

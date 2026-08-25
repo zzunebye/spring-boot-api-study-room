@@ -1,5 +1,7 @@
 package com.example.study_room.common.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,13 +12,9 @@ import jakarta.validation.ConstraintViolationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-	// [BusinessException]이 발생하면 handleBusinessException 메소드가 실행됩니다.
-	// 먼저, 예외 객체에서 ErrorCode를 추출합니다.
-	// ErrorCode로부터 HTTP 상태 값을 얻어 ResponseEntity의 상태 코드로 설정합니다.
-	// 그리고 ErrorResponse 객체로 변환하여 응답 본문에 담아 반환합니다.
-	//
-	// ResponseEntity는 Spring Framework에서 HTTP 응답의 상태 코드, 헤더, 본문을 모두 포함할 수 있게 해주는
-	// 클래스입니다.
+
+	private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
 	@ExceptionHandler(BusinessException.class)
 	public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException exception) {
 		ErrorCode errorCode = exception.getErrorCode();
@@ -30,6 +28,14 @@ public class GlobalExceptionHandler {
 		return ResponseEntity
 				.status(HttpStatus.BAD_REQUEST)
 				.body(ErrorResponse.from(ErrorCode.INVALID_REQUEST));
+	}
+
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<ErrorResponse> handleUnexpected(Exception ex) {
+		log.error("Unhandled exception", ex);
+		return ResponseEntity
+				.status(ErrorCode.INTERNAL_ERROR.getHttpStatus())
+				.body(ErrorResponse.from(ErrorCode.INTERNAL_ERROR));
 	}
 
 }
