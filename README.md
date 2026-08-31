@@ -10,12 +10,14 @@ room/
 ├── RoomService.java
 ├── RoomRepository.java
 ├── StudyRoom.java
+├── RoomAvailabilityChecker.java
 └── dto/
 
 reservation/
 ├── ReservationController.java
 ├── ReservationService.java
-├── ReservationPolicy.java
+├── ReservationTimePolicy.java
+├── ActiveReservationPolicy.java
 ├── ReservationRepository.java
 ├── Reservation.java
 └── dto/
