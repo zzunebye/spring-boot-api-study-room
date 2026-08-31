@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.study_room.common.exception.BusinessException;
 import com.example.study_room.common.exception.ErrorCode;
+import com.example.study_room.room.RoomAvailabilityChecker;
 import com.example.study_room.room.RoomRepository;
 import com.example.study_room.room.StudyRoom;
 
@@ -15,43 +16,49 @@ import com.example.study_room.room.StudyRoom;
 public class ReservationService {
     private final ReservationRepository reservationRepository;
     private final RoomRepository roomRepository;
-    private final ReservationPolicy reservationPolicy;
+    private final ReservationTimePolicy reservationTimePolicy;
+    private final ActiveReservationPolicy activeReservationPolicy;
+    private final RoomAvailabilityChecker roomAvailabilityChecker;
 
     public ReservationService(
             ReservationRepository reservationRepository,
             RoomRepository roomRepository,
-            ReservationPolicy reservationPolicy) {
+            ReservationTimePolicy reservationTimePolicy,
+            ActiveReservationPolicy activeReservationPolicy,
+            RoomAvailabilityChecker roomAvailabilityChecker) {
         this.reservationRepository = reservationRepository;
         this.roomRepository = roomRepository;
-        this.reservationPolicy = reservationPolicy;
+        this.reservationTimePolicy = reservationTimePolicy;
+        this.activeReservationPolicy = activeReservationPolicy;
+        this.roomAvailabilityChecker = roomAvailabilityChecker;
     }
 
     @Transactional
     public ReserveResult reserve(Long userId, CreateReservationRequest request, UUID requestKey) {
 
         // Idempotency Check
-        Reservation existingReservation = reservationRepository.findByUserIdAndRequestKey(userId, requestKey)
+        Reservation existingReservation = reservationRepository
+                .findByUserIdAndRequestKey(userId, requestKey)
                 .orElse(null);
+
         if (existingReservation != null) {
             return new ReserveResult(ReservationResponse.from(existingReservation), false);
         }
 
-        // Find Room by ID
-        StudyRoom room = roomRepository.findById(request.roomId())
+        StudyRoom room = roomRepository
+                .findById(request.roomId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
 
-        if (!"ACTIVE".equals(room.getStatus())) {
+        if (!room.isReservable()) {
             throw new BusinessException(ErrorCode.ROOM_NOT_AVAILABLE);
         }
+        if (!room.canAccommodate(request.participantCount())) {
+            throw new BusinessException(ErrorCode.RESERVATION_POLICY_VIOLATION);
+        }
 
-        // ReservationPolicy: time range, slot grid, future limit, capacity, active
-        // count
-        reservationPolicy.validateForCreate(
-                userId,
-                room,
-                request.startAt(),
-                request.endAt(),
-                request.participantCount());
+        reservationTimePolicy.validate(request.startAt(), request.endAt());
+        activeReservationPolicy.validate(userId);
+        roomAvailabilityChecker.validate(room, request.startAt(), request.endAt());
 
         Reservation reservation = Reservation.create(
                 userId,
@@ -62,7 +69,6 @@ public class ReservationService {
                 request.purpose(),
                 requestKey);
 
-        // Attempt to save the reservation, handling duplicate or conflicting time
         try {
             Reservation saved = reservationRepository.saveAndFlush(reservation);
             return new ReserveResult(ReservationResponse.from(saved), true);
