@@ -61,4 +61,12 @@ public class StudyRoom {
         return branchId;
     }
 
+    public boolean isReservable() {
+        return "ACTIVE".equals(status);
+    }
+
+    public boolean canAccommodate(int participantCount) {
+        return participantCount <= capacity;
+    }
+
 }
