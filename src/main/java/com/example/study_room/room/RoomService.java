@@ -26,12 +26,13 @@ public class RoomService {
 
 	public RoomListResponse getAllRooms(
 			String status,
+			Long branchId,
 			Integer minCapacity,
 			Integer maxCapacity) {
 		validateStatus(status);
 		validateCapacityRange(minCapacity, maxCapacity);
 
-		List<RoomResponse> items = roomRepository.search(status, minCapacity, maxCapacity).stream()
+		List<RoomResponse> items = roomRepository.search(status, branchId, minCapacity, maxCapacity).stream()
 				.map(RoomResponse::from)
 				.toList();
 		return new RoomListResponse(items);

@@ -1,6 +1,7 @@
 package com.example.study_room.reservation;
 
 import java.time.Duration;
+import java.time.ZoneId;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.validation.annotation.Validated;
@@ -11,6 +12,7 @@ import jakarta.validation.constraints.NotNull;
 @ConfigurationProperties(prefix = "reservation")
 @Validated
 public record ReservationProperties(
+		@NotNull ZoneId zoneId,
 		@NotNull Duration minimumDuration,
 		@NotNull Duration maximumDuration,
 		@NotNull Duration slotUnit,

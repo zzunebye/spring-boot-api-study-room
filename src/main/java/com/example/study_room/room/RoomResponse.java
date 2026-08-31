@@ -6,6 +6,7 @@ package com.example.study_room.room;
  */
 public record RoomResponse(
         Long id,
+        Long branchId,
         String name,
         String location,
         int capacity,
@@ -16,6 +17,7 @@ public record RoomResponse(
     public static RoomResponse from(StudyRoom room) {
         return new RoomResponse(
                 room.getId(),
+                room.getBranchId(),
                 room.getName(),
                 room.getLocation(),
                 room.getCapacity(),

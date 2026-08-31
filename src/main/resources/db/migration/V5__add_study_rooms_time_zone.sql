@@ -1,0 +1,2 @@
+ALTER TABLE study_rooms
+ADD COLUMN time_zone VARCHAR(64) NOT NULL DEFAULT 'Asia/Seoul';

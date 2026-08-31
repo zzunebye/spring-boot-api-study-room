@@ -54,7 +54,9 @@ public class SecurityConfig {
 								"/api/v1/auth",
 								"/api/v1/auth/**",
 								"/api/v1/rooms",
-								"/api/v1/rooms/**")
+								"/api/v1/rooms/**",
+								"/api/v1/branches",
+								"/api/v1/branches/**")
 						.permitAll()
 						// 그 외 모든 요청은 인증 필요.
 						.anyRequest().authenticated())

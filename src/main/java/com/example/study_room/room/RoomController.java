@@ -18,9 +18,10 @@ public class RoomController {
     @GetMapping
     public RoomListResponse getAllRooms(
             @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long branchId,
             @RequestParam(required = false) Integer minCapacity,
             @RequestParam(required = false) Integer maxCapacity) {
-        return roomService.getAllRooms(status, minCapacity, maxCapacity);
+        return roomService.getAllRooms(status, branchId, minCapacity, maxCapacity);
     }
 
     @GetMapping("/{roomId}")

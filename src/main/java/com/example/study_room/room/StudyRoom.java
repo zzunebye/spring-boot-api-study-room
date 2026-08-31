@@ -1,5 +1,6 @@
 package com.example.study_room.room;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -23,6 +24,9 @@ public class StudyRoom {
     private int capacity;
     private String status; // 처음엔 String으로 해도 OK. 나중에 enum으로
     private long version;
+
+    @Column(nullable = false)
+    private Long branchId;
     // getter only is enough, and if needed, add setter.
 
     public Long getId() {
@@ -51,6 +55,10 @@ public class StudyRoom {
 
     public long getVersion() {
         return version;
+    }
+
+    public Long getBranchId() {
+        return branchId;
     }
 
 }
